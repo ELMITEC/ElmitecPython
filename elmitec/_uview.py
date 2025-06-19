@@ -86,7 +86,7 @@ class UView:
             image = _receive(self.__sock, Mode.BINARY, width * height * 2)
             image = np.frombuffer(image, np.uint16)
             _receive(self.__sock, Mode.BINARY, 1)
-            return image.reshape((width, height))
+            return image.reshape((height, width))
     
     def export_image(self, name: str, format: FileFormat = FileFormat.DAT, contents: FileContents = FileContents.PROCESSED):
         """Exports the current image to a file stored on the machine where U-view software is running.
