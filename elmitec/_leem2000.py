@@ -75,9 +75,10 @@ class Leem2000:
                 if not mnemonic in ["", "no name", "invalid", "disabled"]:
                     self.mnemonic[x] = mnemonic
                     self.idByMnemonic[mnemonic.upper()] = x
-                unit = cast(str, _cmd(self.__sock, f"uni {x}"))
-                if not unit in ["", "no name", "invalid", "disabled"]:
-                    self.unit[x] = unit
+                if x in self.name.keys():
+                    unit = cast(str, _cmd(self.__sock, f"uni {x}"))
+                    if not unit in ["", "no name", "invalid", "disabled"]:
+                        self.unit[x] = unit
                 low = cast(str, _cmd(self.__sock, f"psl {x}"))
                 if not low in ["", "no name", "invalid", "disabled"]:
                     self.lowLimit[x] = float(low)
