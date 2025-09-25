@@ -46,18 +46,24 @@ class Leem2000:
 
     def number_of_modules(self) -> Optional[int]:
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to LEEM2000")
         else:
             return _cmd(self.__sock, "nrm", Mode.INTEGER)  # type: ignore
 
     def update_values(self):
-        if self.connected:
+        """Update mnemonic map with values from all modules"""
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
             self.values = {}
             for x in self.mnemonic:
                 pass
     
     def update_modules(self):
-        if self.connected:
+        """Update internal maps containing information about all available modules"""
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
             self.nrModules = cast(int, self.number_of_modules())
             self.name = {}
             self.mnemonic = {}
@@ -86,10 +92,10 @@ class Leem2000:
                 if not high in ["", "no name", "invalid", "disabled"]:
                     self.highLimit[x] = float(high)
     
-    def version(self) -> Optional[float]:
+    def version(self) -> float:
         """Obtain U-view version returned as a float type or None if not connected."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to LEEM2000")
         else:
             return cast(float, _cmd(self.__sock, "ver", Mode.FLOAT))
 

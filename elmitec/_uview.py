@@ -75,7 +75,7 @@ class UView:
         """Load image data from currently active window. Returns None if not connected,
         otherwise two-dimensional NumPy array of cell type uin16 is returned."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             header = _cmd(self.__sock, "ida 0 0", Mode.BINARY, 19).decode('ascii')
             items = header.split()
@@ -110,6 +110,8 @@ class UView:
         on screen (FileContents.PROCESSED)
 
         FileFormat.TIFF16 - uncompressed 16-bit RAW x,y,z data. The contents parameter is ignored."""
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
         if not isinstance(name, str) or name == "":
             raise ValueError("Invalid filename")
         elif len(name) >= 260:
@@ -132,17 +134,18 @@ class UView:
         0 - disables averaging,
         1 - enables sliding average mode,
         2..499 - set number of images for averaging to given value."""
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
         if not isinstance(avg, int) or avg < 0 or avg > 499:
             raise ValueError("avg parameter not an integer or out of range (0..499)")
-        if self.connected:
-            _cmd(self.__sock, f"avr {avg}")
+        _cmd(self.__sock, f"avr {avg}")
 
     def averaging(self) -> Optional[int]:
         """Return averaging mode used by U-View or None if not connected. Retured value
         gives number of images used for averaging (value 2 and larger), indicates
         sliding average mode (value 1) or indicates disabled averaging (value 0)."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             return _cmd(self.__sock, "avr", Mode.INTEGER)
 
@@ -150,18 +153,17 @@ class UView:
         """Set camera to receive a single image and put it into a window specified by
         supplied argument. If window number -1 is given, the image will be put into
         the active window."""
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
         if not isinstance(window, int) or window < -1:
             window = -1
-        if not self.connected:
-            return None
-        else:
-            _cmd(self.__sock, f"asi {window}")
+        _cmd(self.__sock, f"asi {window}")
     
     def acquisition_in_progress(self) -> Optional[bool]:
         """Get current status of image acquisition. Returns True of acquisition is in
         progress, False otherwise. Returns None if not connected to U-view."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             aip = _cmd(self.__sock, "aip", Mode.INTEGER)
             if aip == 0:
@@ -171,16 +173,17 @@ class UView:
 
     def set_continuous_acquisition(self, continuous: bool = True):
         """Enable/disable continous acquisition in U-view."""
-        if self.connected:
-            if continuous:
-                _cmd(self.__sock, "aip 1")
-            else:
-                _cmd(self.__sock, "aip 0")
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
+        if continuous:
+            _cmd(self.__sock, "aip 1")
+        else:
+            _cmd(self.__sock, "aip 0")
 
     def get_camera_size(self) -> Optional[tuple]:
         """Returns a tuple giving the size of camera sensor in form (width, height)."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             size = _cmd(self.__sock, "gcs").split()
             if len(size) != 2:
@@ -193,7 +196,7 @@ class UView:
         of four floats: (minimum X, minimum Y, maximum X, maximum Y) or None if not
         connected"""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             xmi = _cmd(self.__sock, "xmi", Mode.FLOAT)
             ymi = _cmd(self.__sock, "ymi", Mode.FLOAT)
@@ -204,7 +207,9 @@ class UView:
     def get_marker_info(self, id: int) -> Optional[dict]:
         """Returns a dictionary containing information about marker specified by id passed
         as a parameter or null if marker is invalid or class not connected to U-view."""
-        if not self.connected or not isinstance(id, int) or id < 0:
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
+        if not isinstance(id, int) or id < 0:
             return None
         else:
             reply = _cmd(self.__sock, f"mar {id}").split()
@@ -230,20 +235,22 @@ class UView:
     def exposure_time(self) -> Optional[float]:
         """Returns current exposure time in milliseconds or None, if not connected."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             return _cmd(self.__sock, "ext", Mode.FLOAT)
 
     def set_exposure_time(self, exposure: float):
         """Set exposure time in millisecond. The argument is float, but decimal part is
         ignored."""
-        if self.connected:
+        if not self.connected:
+            raise ConnectionError("Not connected to U-view")
+        else:
             _cmd(self.__sock, f"ext {exposure:.0f}")
 
     def version(self) -> Optional[float]:
         """Obtain U-view version returned as a float type or None if not connected."""
         if not self.connected:
-            return None
+            raise ConnectionError("Not connected to U-view")
         else:
             return _cmd(self.__sock, "ver", Mode.FLOAT)
 
