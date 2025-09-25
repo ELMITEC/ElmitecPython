@@ -57,7 +57,11 @@ class Leem2000:
         else:
             self.values = {}
             for x in self.mnemonic:
-                pass
+                data = cast(str, _cmd(self.__sock, f"get {x}"))
+                try:
+                    self.values[x] = float(data)
+                except ValueError:
+                    pass
     
     def update_modules(self):
         """Update internal maps containing information about all available modules"""
@@ -107,6 +111,8 @@ class Leem2000:
             self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.__sock.connect(addr)
             self.connected = True
+            self.update_modules()
+            self.update_values()
 
     def disconnect(self):
         """Disconnect from Leem2000."""
@@ -117,22 +123,116 @@ class Leem2000:
 
     def set_port(self, port):
         """Set port for establishing new connection. Raises a ValueError exception if
-        port number is not in the valid range (0..65535)."""
-        if isinstance(port, int) and port >= 0 and port < 65536:
-            self.__port = port
+        port number is not in the valid range (0..65535). Raises TypeError exception
+        if port is not an integer."""
+        if isinstance(port, int):
+            if port >= 0 and port < 65536:
+                self.__port = port
+            else:
+                raise ValueError('Port number must be an integer in range 0..65535')
         else:
-            raise ValueError('Port number must be an integer in range 0..65535')
+            raise TypeError('Port number must be of integer type')
 
     def port(self) -> int:
         return self.__port
 
     def set_host(self, host):
         """Set host name either in textual form or as an IP address. In both
-        cases it must be a string, otherwise ValueException will be thrown."""
+        cases it must be a string, otherwise TypeError will be thrown."""
         if not isinstance(host, str):
-            raise ValueError('host must be a valig string')
+            raise TypeError('Host must be a valig string')
         else:
             self.__host = host
 
     def host(self) -> str:
         return self.__host
+
+    def get_value(self, id) -> float:
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            return cast(float, _cmd(self.__sock, f"get {id}", Mode.FLOAT))
+
+    def set_value(self, id, value) -> bool:
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                if isinstance(id, str):
+                    if not id.upper() in self.idByName.keys() and not id.upper() in self.idByMnemonic.keys():
+                        return False
+                elif not isinstance(id, int) or isinstance(id, float):
+                    raise TypeError("Id must be an integer or string")
+                
+                ret = cast(str, _cmd(self.__sock, f"set {id}={value}"))
+                return ret == '0'
+            else:
+                raise TypeError('Value must be of float type')
+    
+    def get_low_limit(self, id) -> Optional[float]:
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            if isinstance(id, str):
+                if id.upper() in self.idByName.keys():
+                    id = self.idByName[id.upper()]
+                elif id.upper() in self.idByMnemonic.keys():
+                    id = self.idByMnemonic[id.upper()]
+                else:
+                    return None
+            elif not isinstance(id, int) or isinstance(id, float):
+                raise TypeError("Id must be an integer or string")
+                
+            return cast(float, _cmd(self.__sock, f"psl {id}", Mode.FLOAT))
+
+    def get_high_limit(self, id) -> Optional[float]:
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            if isinstance(id, str):
+                if id.upper() in self.idByName.keys():
+                    id = self.idByName[id.upper()]
+                elif id.upper() in self.idByMnemonic.keys():
+                    id = self.idByMnemonic[id.upper()]
+                else:
+                    return None
+            elif not isinstance(id, int) or isinstance(id, float):
+                raise TypeError("Id must be an integer or string")
+                
+            return cast(float, _cmd(self.__sock, f"psh {id}", Mode.FLOAT))
+
+    def get_fov(self):
+        """Get Field-of-View from current preset"""
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            data = cast(str, _cmd(self.__sock, "prl"))
+            part = data.partition('µ')
+            if part[1] == 'µ':
+                try:
+                    fov = float(part[0])
+                    return (fov, True)
+                except:
+                    return (data, False)
+            return (data, False)
+
+    def get_modified_modules(self):
+        """Get names and values from modules which changed"""
+        if not self.connected:
+            raise ConnectionError("Not connected to LEEM2000")
+        else:
+            data = cast(str, _cmd(self.__sock, 'chm'))
+            if data != '0':
+                items = data.split()
+                nchanges = int(items[0])
+                chg = []
+                for i in range(nchanges):
+                    idx = int(items[2 * i + 1])
+                    val = float(items[2 * i + 2])
+                    if idx in self.name.keys():
+                        name = self.name[idx]
+                    else:
+                        name = f"Unknown{idx}"
+                    chg.append({ 'moduleName': name, 'moduleNr': idx, 'newValue': val })
+                return (nchanges, chg)
+        return (0, None)
