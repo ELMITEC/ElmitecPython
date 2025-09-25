@@ -49,7 +49,7 @@ def _receive(sock, mode = Mode.STRING, length = -1):
                 if len(buff) == 0 or buff[0] == 0:
                     terminate = True
                 else:
-                    s += buff.decode('ascii')
+                    s += buff.decode('iso8859-1')
             return s
         case Mode.INTEGER:
             str = _receive(sock, Mode.STRING)
